@@ -53,6 +53,7 @@ private:
     // Current state
     geometry_msgs::msg::Twist current_twist_;
     geometry_msgs::msg::Twist target_twist_;
+    geometry_msgs::msg::Twist actual_twist_;
     rclcpp::Time last_cmd_time_;
     WheelState current_wheel_state_;
     

@@ -61,20 +61,32 @@ void AdvancedTankController::setupSubscribersAndPublishers() {
         "cmd_vel", 10, 
         std::bind(&AdvancedTankController::cmdVelCallback, this, std::placeholders::_1));
 
+    wheel_rpm_sub_ = this->create_subscription<tank_interface::msg::MotorRPMArray>(
+        "/actual_wheel_speed", 30, 
+        std::bind(&AdvancedTankController::wheelRPMCallback, this, std::placeholders::_1));
+
+
     motor_rpm_pub_ = this->create_publisher<tank_interface::msg::MotorRPMArray>("motor_rpms", 10);
     odom_pub_ = this->create_publisher<nav_msgs::msg::Odometry>("odom", 10);
     tf_broadcaster_ = std::make_unique<tf2_ros::TransformBroadcaster>(*this);
 }
 
 void AdvancedTankController::cmdVelCallback(const geometry_msgs::msg::Twist::SharedPtr msg) {
-    // Limit incoming velocities
+
+    RCLCPP_DEBUG(this->get_logger(), "Received cmd_vel - linear: %.2f, angular: %.2f", 
+                msg->linear.x, msg->angular.z);
+                
     target_twist_.linear.x = std::clamp(msg->linear.x, 
                                       -max_linear_velocity_, 
                                       max_linear_velocity_);
     target_twist_.angular.z = std::clamp(msg->angular.z, 
                                        -max_angular_velocity_, 
                                        max_angular_velocity_);
+
     last_cmd_time_ = this->now();
+                                       
+    RCLCPP_DEBUG(this->get_logger(), "Target velocities after clamping - linear: %.2f, angular: %.2f", 
+                target_twist_.linear.x, target_twist_.angular.z);
 }
 
 void AdvancedTankController::updateCommand() {
@@ -123,33 +135,36 @@ WheelState AdvancedTankController::calculateWheelRPMs(const geometry_msgs::msg::
     double left_velocity = twist.linear.x - (twist.angular.z * wheel_separation_ / 2.0);
     double right_velocity = twist.linear.x + (twist.angular.z * wheel_separation_ / 2.0);
 
-    // Convert velocities to RPM for rear wheels
+    
+    RCLCPP_DEBUG(this->get_logger(), "Track velocities - Left: %.2f, Right: %.2f", 
+                left_velocity, right_velocity);
+
+    // Convert velocities to RPM
     result.rear_left_rpm = velocityToRPM(left_velocity, rear_wheel_diameter_);
     result.rear_right_rpm = velocityToRPM(right_velocity, rear_wheel_diameter_);
-
-    // Calculate front wheel RPMs
     result.front_left_rpm = velocityToRPM(left_velocity, front_wheel_diameter_);
     result.front_right_rpm = velocityToRPM(right_velocity, front_wheel_diameter_);
+
+    RCLCPP_DEBUG(this->get_logger(), "Calculated RPMs - FL: %.2f, FR: %.2f, RL: %.2f, RR: %.2f",
+                result.front_left_rpm, result.front_right_rpm, 
+                result.rear_left_rpm, result.rear_right_rpm);
 
     return result;
 }
 
+
 void AdvancedTankController::limitAndPublishRPMs(const WheelState& wheel_rpms) {
-    auto msg = tank_interface::msg::MotorRPMArray();
+    auto msg = std::make_shared<tank_interface::msg::MotorRPMArray>();
     
     // Apply RPM limits and convert to float
-    msg.rpm = {
+    msg->rpm = {
         static_cast<float>(std::clamp(static_cast<double>(wheel_rpms.front_left_rpm), -max_rpm_, max_rpm_)),
         static_cast<float>(std::clamp(static_cast<double>(wheel_rpms.front_right_rpm), -max_rpm_, max_rpm_)),
         static_cast<float>(std::clamp(static_cast<double>(wheel_rpms.rear_left_rpm), -max_rpm_, max_rpm_)),
         static_cast<float>(std::clamp(static_cast<double>(wheel_rpms.rear_right_rpm), -max_rpm_, max_rpm_))
     };
     
-    motor_rpm_pub_->publish(msg);
-
-    RCLCPP_DEBUG(this->get_logger(), 
-                "RPMs (FL, FR, RL, RR): %.1f, %.1f, %.1f, %.1f",
-                msg.rpm[0], msg.rpm[1], msg.rpm[2], msg.rpm[3]);
+    motor_rpm_pub_->publish(*msg);
 }
 
 
@@ -184,13 +199,18 @@ void AdvancedTankController::updateOdometry() {
 
     if (dt == 0.0) return;
 
-    // Calculate linear velocities for left and right tracks using rear wheels
-    double left_rear_vel = rpmToVelocity(current_wheel_state_.rear_left_rpm, rear_wheel_diameter_);
-    double right_rear_vel = rpmToVelocity(current_wheel_state_.rear_right_rpm, rear_wheel_diameter_);
+    // Calculate linear velocities for left and right tracks using front wheels
+    double left_front_vel = rpmToVelocity(current_wheel_state_.front_left_rpm, front_wheel_diameter_);
+    double right_front_vel = rpmToVelocity(current_wheel_state_.front_right_rpm, front_wheel_diameter_);
+
+    RCLCPP_DEBUG(this->get_logger(), 
+            "RPMs (FL, FR): %.1f, %.1f",
+            current_wheel_state_.front_left_rpm, current_wheel_state_.front_right_rpm);
+
 
     // Calculate robot's linear and angular velocity
-    double linear_vel = (right_rear_vel + left_rear_vel) / 2.0;
-    double angular_vel = (right_rear_vel - left_rear_vel) / wheel_separation_;
+    double linear_vel = (right_front_vel + left_front_vel) / 2.0;
+    double angular_vel = (right_front_vel - left_front_vel) / wheel_separation_;
 
     // Update pose
     double delta_theta = angular_vel * dt;
@@ -218,8 +238,8 @@ void AdvancedTankController::updateOdometry() {
     if (theta_ < -M_PI) theta_ += 2 * M_PI;
 
     // Update current twist for odometry message
-    current_twist_.linear.x = linear_vel;
-    current_twist_.angular.z = angular_vel;
+    actual_twist_.linear.x = linear_vel;
+    actual_twist_.angular.z = angular_vel;
 }
 
 void AdvancedTankController::publishOdometry() {
@@ -242,7 +262,7 @@ void AdvancedTankController::publishOdometry() {
     odom_msg.pose.pose.orientation.w = q.w();
 
     // Set velocities
-    odom_msg.twist.twist = current_twist_;
+    odom_msg.twist.twist = actual_twist_;
 
     // Add covariance (example values - adjust based on your robot's characteristics)
     for (size_t i = 0; i < 36; ++i) {
