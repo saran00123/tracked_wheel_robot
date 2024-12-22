@@ -12,3 +12,16 @@ tank_drive_controller:
     max_angular_jerk: 0.75
     odom_frequency: 20
     motor_command_frequency: 50
+
+
+    # Linear velocity PID parameters
+    linear_pid_kp: 0.95
+    linear_pid_ki: 0.08  # Reduced from 0.15
+    linear_pid_kd: 0.08
+    linear_pid_windup_limit: 0.3  # Reduced from 0.5
+
+    # Angular velocity PID parameters
+    angular_pid_kp: 1.2
+    angular_pid_ki: 0.1   # Reduced from 0.18
+    angular_pid_kd: 0.1
+    angular_pid_windup_limit: 0.5  # Reduced from 1.0

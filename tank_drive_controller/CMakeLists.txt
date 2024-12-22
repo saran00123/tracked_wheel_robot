@@ -16,23 +16,24 @@ include_directories(
 )
 
 # Add the executable
-add_executable(tank_drive_node src/tank_drive_controller.cpp)
-ament_target_dependencies(tank_drive_node
-  rclcpp
-  geometry_msgs
-  tank_interface
-)
+# add_executable(tank_drive_node src/tank_drive_controller.cpp)
+# ament_target_dependencies(tank_drive_node
+#   rclcpp
+#   geometry_msgs
+#   tank_interface
+# )
 
 # Install the executable
-install(TARGETS
-  tank_drive_node
-  DESTINATION lib/${PROJECT_NAME})
+# install(TARGETS
+#   tank_drive_node
+#   DESTINATION lib/${PROJECT_NAME})
 
 
 # Add the executable
 add_executable(advanced_tank_drive_node 
   src/advanced_tank_drive_controller.cpp
 )
+
 target_include_directories(advanced_tank_drive_node PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>)
@@ -51,6 +52,11 @@ install(TARGETS
   advanced_tank_drive_node
   DESTINATION lib/${PROJECT_NAME}
 )
+
+# Install the Python script
+install(PROGRAMS
+  script/tank_driver_tester.py
+  DESTINATION lib/${PROJECT_NAME})
 
 # Install other files (e.g., launch and config)
 install(DIRECTORY include launch config

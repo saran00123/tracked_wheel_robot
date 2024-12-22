@@ -7,6 +7,7 @@
 #include <tf2_ros/transform_broadcaster.h>
 #include <tf2/LinearMath/Quaternion.h>
 #include "tank_interface/msg/motor_rpm_array.hpp"
+#include "tank_drive_controller/pid_controller.hpp"
 
 namespace tank_controller {
 
@@ -61,6 +62,22 @@ private:
     double x_, y_, theta_;
     rclcpp::Time last_odom_time_;
 
+    // PID controllers for linear and angular velocity
+    std::unique_ptr<PIDController> linear_pid_;
+    std::unique_ptr<PIDController> angular_pid_;
+    
+    // PID parameters
+    double linear_pid_kp_;
+    double linear_pid_ki_;
+    double linear_pid_kd_;
+    double angular_pid_kp_;
+    double angular_pid_ki_;
+    double angular_pid_kd_;
+    double pid_windup_limit_;
+    
+    // Current velocity state
+    geometry_msgs::msg::Twist current_velocity_;
+
     // Initialization functions
     void initializeParameters();
     void setupSubscribersAndPublishers();
@@ -73,8 +90,8 @@ private:
     // Update functions
     void updateCommand();
     void updateOdometry();
-    void updateVelocityWithLimits(double& current, double target, 
-                                 double max_acceleration, double dt);
+    // void updateVelocityWithLimits(double& current, double target, 
+    //                              double max_acceleration, double dt);
 
     // Publishing functions
     void publishOdometry();

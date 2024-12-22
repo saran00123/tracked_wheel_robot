@@ -42,6 +42,15 @@ void AdvancedTankController::initializeParameters() {
     this->declare_parameter("odom_frequency", 20);               // RPM
     this->declare_parameter("motor_command_frequency", 50);               // RPM
 
+    // Add PID parameters for linear and angular control
+    this->declare_parameter("linear_pid_kp", 1.0);
+    this->declare_parameter("linear_pid_ki", 0.1);
+    this->declare_parameter("linear_pid_kd", 0.05);
+    this->declare_parameter("angular_pid_kp", 1.2);
+    this->declare_parameter("angular_pid_ki", 0.1);
+    this->declare_parameter("angular_pid_kd", 0.05);
+    this->declare_parameter("pid_windup_limit", 1.0);
+
     // Load parameters
     front_wheel_diameter_ = this->get_parameter("front_wheel_diameter").as_double();
     rear_wheel_diameter_ = this->get_parameter("rear_wheel_diameter").as_double();
@@ -54,9 +63,30 @@ void AdvancedTankController::initializeParameters() {
     max_rpm_ = this->get_parameter("max_rpm").as_double();
     odom_frequency_ = this->get_parameter("odom_frequency").as_int();
     motor_command_frequency_ = this->get_parameter("motor_command_frequency").as_int();
+    
+    linear_pid_kp_ = this->get_parameter("linear_pid_kp").as_double();
+    linear_pid_ki_ = this->get_parameter("linear_pid_ki").as_double();
+    linear_pid_kd_ = this->get_parameter("linear_pid_kd").as_double();
+    angular_pid_kp_ = this->get_parameter("angular_pid_kp").as_double();
+    angular_pid_ki_ = this->get_parameter("angular_pid_ki").as_double();
+    angular_pid_kd_ = this->get_parameter("angular_pid_kd").as_double();
+    pid_windup_limit_ = this->get_parameter("pid_windup_limit").as_double();
+    
+    // Initialize PID controllers
+    linear_pid_ = std::make_unique<PIDController>(
+        linear_pid_kp_, linear_pid_ki_, linear_pid_kd_,
+        -max_linear_velocity_, max_linear_velocity_, pid_windup_limit_);
+        
+    angular_pid_ = std::make_unique<PIDController>(
+        angular_pid_kp_, angular_pid_ki_, angular_pid_kd_,
+        -max_angular_velocity_, max_angular_velocity_, pid_windup_limit_);
+
+
 }
 
 void AdvancedTankController::setupSubscribersAndPublishers() {
+    // Setting up subscribers and publishers
+
     cmd_vel_sub_ = this->create_subscription<geometry_msgs::msg::Twist>(
         "cmd_vel", 10, 
         std::bind(&AdvancedTankController::cmdVelCallback, this, std::placeholders::_1));
@@ -73,9 +103,13 @@ void AdvancedTankController::setupSubscribersAndPublishers() {
 
 void AdvancedTankController::cmdVelCallback(const geometry_msgs::msg::Twist::SharedPtr msg) {
 
+    // Command Velocity Callback function to handle incoming Twist messages
+
     RCLCPP_DEBUG(this->get_logger(), "Received cmd_vel - linear: %.2f, angular: %.2f", 
                 msg->linear.x, msg->angular.z);
-                
+
+            
+    // Clamp linear and angular velocities to limits     
     target_twist_.linear.x = std::clamp(msg->linear.x, 
                                       -max_linear_velocity_, 
                                       max_linear_velocity_);
@@ -90,38 +124,63 @@ void AdvancedTankController::cmdVelCallback(const geometry_msgs::msg::Twist::Sha
 }
 
 void AdvancedTankController::updateCommand() {
+
+
+    const double velocity_deadband = 0.01;  // 1 cm/s
+    const double angular_deadband = 0.01;   // ~0.6 degrees/s
+
+    // If command is very close to zero, explicitly set to zero
+    if (abs(target_twist_.linear.x) < velocity_deadband) {
+        target_twist_.linear.x = 0.0;
+        linear_pid_->reset();  // Reset PID integrator
+    }
+    if (abs(target_twist_.angular.z) < angular_deadband) {
+        target_twist_.angular.z = 0.0;
+        angular_pid_->reset();  // Reset PID integrator
+    }
+
     // Check command timeout (500ms)
     if ((this->now() - last_cmd_time_).seconds() > 1.0) {
         target_twist_ = geometry_msgs::msg::Twist();
+        linear_pid_->reset();
+        angular_pid_->reset();
     }
 
-    // Calculate time delta
-    static auto last_update = this->now();
-    double dt = (this->now() - last_update).seconds();
-    last_update = this->now();
-
-    // Apply acceleration limits
-    updateVelocityWithLimits(current_twist_.linear.x, target_twist_.linear.x,
-                            max_linear_acceleration_, dt);
-    updateVelocityWithLimits(current_twist_.angular.z, target_twist_.angular.z,
-                            max_angular_acceleration_, dt);
-
-    // Calculate and publish wheel RPMs
-    auto wheel_rpms = calculateWheelRPMs(current_twist_);
-    limitAndPublishRPMs(wheel_rpms);
-}
-
-void AdvancedTankController::updateVelocityWithLimits(double& current, double target,
-                                                     double max_acceleration, double dt) {
-    double velocity_error = target - current;
-    double max_velocity_change = max_acceleration * dt;
+    // Apply PID control to linear and angular velocities
+    double controlled_linear_vel = linear_pid_->compute(
+        target_twist_.linear.x,
+        actual_twist_.linear.x
+    );
     
-    if (std::abs(velocity_error) > max_velocity_change) {
-        current += max_velocity_change * (velocity_error > 0 ? 1.0 : -1.0);
-    } else {
-        current = target;
-    }
+    double controlled_angular_vel = angular_pid_->compute(
+        target_twist_.angular.z,
+        actual_twist_.angular.z
+    );
+
+    // Create controlled twist
+    geometry_msgs::msg::Twist controlled_twist;
+    controlled_twist.linear.x = controlled_linear_vel;
+    controlled_twist.angular.z = controlled_angular_vel;
+
+    // Calculate and publish wheel RPMs based on controlled velocities
+    auto wheel_rpms = calculateWheelRPMs(controlled_twist);
+    limitAndPublishRPMs(wheel_rpms);
+
+    RCLCPP_WARN(this->get_logger(), "Target vs Actual - Linear: %.2f/%.2f, Angular: %.2f/%.2f", target_twist_.linear.x, actual_twist_.linear.x,
+        target_twist_.angular.z, actual_twist_.angular.z);
 }
+
+// void AdvancedTankController::updateVelocityWithLimits(double& current, double target,
+//                                                      double max_acceleration, double dt) {
+//     double velocity_error = target - current;
+//     double max_velocity_change = max_acceleration * dt;
+    
+//     if (std::abs(velocity_error) > max_velocity_change) {
+//         current += max_velocity_change * (velocity_error > 0 ? 1.0 : -1.0);
+//     } else {
+//         current = target;
+//     }
+// }
 
 double AdvancedTankController::velocityToRPM(double velocity, double wheel_diameter) const {
     // Convert linear velocity (m/s) to RPM
@@ -131,6 +190,7 @@ double AdvancedTankController::velocityToRPM(double velocity, double wheel_diame
 WheelState AdvancedTankController::calculateWheelRPMs(const geometry_msgs::msg::Twist& twist) const {
     WheelState result;
     
+    // Ref : https://github.com/ros-controls/ros2_controllers/blob/master/diff_drive_controller/src/diff_drive_controller.cpp [code line no: 261]
     // Calculate track velocities (m/s)
     double left_velocity = twist.linear.x - (twist.angular.z * wheel_separation_ / 2.0);
     double right_velocity = twist.linear.x + (twist.angular.z * wheel_separation_ / 2.0);
