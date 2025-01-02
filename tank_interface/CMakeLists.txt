@@ -8,6 +8,7 @@ find_package(rosidl_default_generators REQUIRED)
 # Add the message files
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/MotorRPMArray.msg"
+  "msg/FlipperPose.msg"
 )
 
 # Install message files

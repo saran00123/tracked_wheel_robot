@@ -50,6 +50,8 @@ private:
     double max_rpm_;                // RPM
     int odom_frequency_;
     int motor_command_frequency_;
+    bool publish_tf;
+    bool use_pid;
 
     // Current state
     geometry_msgs::msg::Twist current_twist_;
@@ -74,6 +76,9 @@ private:
     double angular_pid_ki_;
     double angular_pid_kd_;
     double pid_windup_limit_;
+
+    double front_wheel_left_target_rpm;
+    double front_wheel_right_target_rpm;
     
     // Current velocity state
     geometry_msgs::msg::Twist current_velocity_;
