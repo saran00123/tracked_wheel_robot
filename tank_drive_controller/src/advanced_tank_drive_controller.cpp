@@ -217,7 +217,7 @@ void AdvancedTankController::updateCommand() {
         angular_pid_->reset();  // Reset PID integrator
     }
 
-    // // Check command timeout (500ms)
+    // Check command timeout (500ms)
     // if ((this->now() - last_cmd_time_).seconds() > 1.0) {
     //     target_twist_ = geometry_msgs::msg::Twist();
     //     linear_pid_->reset();

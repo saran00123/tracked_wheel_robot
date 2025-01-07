@@ -1,7 +1,7 @@
 tank_drive_controller:
   ros__parameters:
-    front_wheel_diameter: 0.186   # in meters 
-    rear_wheel_diameter: 0.148 # in meters
+    front_wheel_diameter: 0.230   # in meters 
+    rear_wheel_diameter: 0.280 # in meters
     wheel_separation: 0.515 # in meters
     wheel_base: 0.700 # in meters
     max_linear_velocity: 1.0 # in m/s
