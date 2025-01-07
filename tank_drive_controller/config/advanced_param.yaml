@@ -15,13 +15,13 @@ tank_drive_controller:
 
     use_pid: true
     # Linear velocity PID parameters
-    linear_pid_kp: 0.05
+    linear_pid_kp: 0.00
     linear_pid_ki: 0.01
-    linear_pid_kd: 0.01
-    linear_pid_windup_limit: 0.3
+    linear_pid_kd: 0.00
+    linear_pid_windup_limit: 3.0
 
     # Angular velocity PID parameters
-    angular_pid_kp: 0.05
+    angular_pid_kp: 0.00
     angular_pid_ki: 0.01
-    angular_pid_kd: 0.01
-    angular_pid_windup_limit: 0.5
+    angular_pid_kd: 0.00
+    angular_pid_windup_limit: 3.0

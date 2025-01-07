@@ -217,12 +217,12 @@ void AdvancedTankController::updateCommand() {
         angular_pid_->reset();  // Reset PID integrator
     }
 
-    // Check command timeout (500ms)
-    if ((this->now() - last_cmd_time_).seconds() > 1.0) {
-        target_twist_ = geometry_msgs::msg::Twist();
-        linear_pid_->reset();
-        angular_pid_->reset();
-    }
+    // // Check command timeout (500ms)
+    // if ((this->now() - last_cmd_time_).seconds() > 1.0) {
+    //     target_twist_ = geometry_msgs::msg::Twist();
+    //     linear_pid_->reset();
+    //     angular_pid_->reset();
+    // }
 
     // Apply PID control to linear and angular velocities
     double controlled_linear_vel = linear_pid_->compute( target_twist_.linear.x, actual_twist_.linear.x );
