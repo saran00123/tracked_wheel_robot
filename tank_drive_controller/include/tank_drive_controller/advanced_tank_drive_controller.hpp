@@ -27,9 +27,10 @@ private:
     // ROS2 communication handles
     rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr cmd_vel_sub_;
     rclcpp::Subscription<tank_interface::msg::MotorRPMArray>::SharedPtr wheel_rpm_sub_;
+    rclcpp::Subscription<geometry_msgs::msg::Twist>::SharedPtr actual_speed_sub_;
     rclcpp::Publisher<tank_interface::msg::MotorRPMArray>::SharedPtr motor_rpm_pub_;
-    rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
-    std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
+    // rclcpp::Publisher<nav_msgs::msg::Odometry>::SharedPtr odom_pub_;
+    // std::unique_ptr<tf2_ros::TransformBroadcaster> tf_broadcaster_;
     
     // Timers
     rclcpp::TimerBase::SharedPtr update_timer_;
@@ -48,9 +49,9 @@ private:
     double max_linear_acceleration_; // m/s^2
     double max_angular_acceleration_;// rad/s^2
     double max_rpm_;                // RPM
-    int odom_frequency_;
+    // int odom_frequency_;
     int motor_command_frequency_;
-    bool publish_tf;
+    // bool publish_tf;
     bool use_pid;
 
     // Current state
@@ -90,17 +91,18 @@ private:
 
     // Callback functions
     void cmdVelCallback(const geometry_msgs::msg::Twist::SharedPtr msg);
-    void wheelRPMCallback(const tank_interface::msg::MotorRPMArray::SharedPtr msg);
+    void actualSpeedCallback(const geometry_msgs::msg::Twist::SharedPtr msg);
+    // void wheelRPMCallback(const tank_interface::msg::MotorRPMArray::SharedPtr msg);
     
     // Update functions
     void updateCommand();
-    void updateOdometry();
+    // void updateOdometry();
     // void updateVelocityWithLimits(double& current, double target, 
     //                              double max_acceleration, double dt);
 
     // Publishing functions
-    void publishOdometry();
-    void publishTransform(const nav_msgs::msg::Odometry& odom_msg);
+    // void publishOdometry();
+    // void publishTransform(const nav_msgs::msg::Odometry& odom_msg);
 
     // Utility functions
     WheelState calculateWheelRPMs(const geometry_msgs::msg::Twist& twist) const;

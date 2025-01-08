@@ -8,9 +8,9 @@ tank_drive_controller:
     max_angular_velocity: 2.0 # in rad/s
     max_linear_acceleration: 1.0 # in m/s^2
     max_angular_acceleration: 1.5 # in rad/s^2
-    odom_frequency: 50 # in Hz
+    # odom_frequency: 50 # in Hz
     motor_command_frequency: 50 # in Hz
-    publish_tf: true
+    # publish_tf: true
 
 
     use_pid: true

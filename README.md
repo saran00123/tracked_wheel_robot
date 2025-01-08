@@ -65,7 +65,13 @@ ros2 launch ros_tcp_endpoint endpoint.launch.py
 ros2 launch tank_drive_controller controller.launch.py
 ```
 
-### 4. Run Teleop Twist Keyboard
+### 4. Launch Tank Odom Estimator
+
+```bash
+ros2 launch tank_odom tank_odom.launch.py
+```
+
+### 5. Run Teleop Twist Keyboard
 
 ```bash
 ros2 run teleop_twist_keyboard teleop_twist_keyboard
