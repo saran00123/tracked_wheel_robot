@@ -45,14 +45,13 @@ Note: Replace humble with the ros distro version you use
    * Set ROS TCP IP Address: "127.0.0.1" (local ip address)
    * Set ROS TCP Port: "10000"
 
-## Moving Around
+# Moving Around
 
 Control the robot's motion using the following keys:
    u    i    o
    j    k    l
    m    ,    .
-
-# Key Mapping:
+Key Mapping:
 
 i: Move forward
 k: Stop
