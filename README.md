@@ -45,6 +45,25 @@ Note: Replace humble with the ros distro version you use
    * Set ROS TCP IP Address: "127.0.0.1" (local ip address)
    * Set ROS TCP Port: "10000"
 
+## Moving Around
+
+Control the robot's motion using the following keys:
+   u    i    o
+   j    k    l
+   m    ,    .
+
+# Key Mapping:
+
+i: Move forward
+k: Stop
+,: Move backward
+u: Move diagonally left forward
+o: Move diagonally right forward
+m: Move diagonally left backward
+.: Move diagonally right backward
+j: Turn left
+l: Turn right
+
 ## Running the Track wheel robot ros2 Controller
 
 ### 1. Source the Workspace
