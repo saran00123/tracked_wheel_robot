@@ -57,13 +57,13 @@ Control the robot's motion using the following keys:
 
 * i: Move forward
 * k: Stop
-,: Move backward
-u: Move diagonally left forward
-o: Move diagonally right forward
-m: Move diagonally left backward
-.: Move diagonally right backward
-j: Turn left
-l: Turn right
+* ,: Move backward
+* u: Move diagonally left forward
+* o: Move diagonally right forward
+* m: Move diagonally left backward
+* .: Move diagonally right backward
+* j: Turn left
+* l: Turn right
 
 ## Running the Track wheel robot ros2 Controller
 
