@@ -84,7 +84,7 @@ void TankOdomNode::updateOdometry(const tank_interface::msg::MotorRPMArray::Shar
     double angular_vel = (right_track_velocity_ - left_track_velocity_) / wheel_separation_;
 
     // Update pose
-    double delta_theta = angular_vel * dt;
+    double delta_theta = (angular_vel * dt)/3;
     double delta_x, delta_y;
 
     if (std::abs(angular_vel) < 0.001) {
